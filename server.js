@@ -35,7 +35,7 @@ app.use(async (req, res, next) => {
 });
 
 // Example route
-app.get("/", (req, res) => {
+app.get("/react", (req, res) => {
   res.send("");
 });
 
