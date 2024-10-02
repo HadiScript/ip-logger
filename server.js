@@ -1,36 +1,42 @@
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
+const mongoose = require("mongoose");
 const cors = require("cors");
+const IpLog = require("./models/ipLog");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enable CORS to allow requests from your React app
+// Enable CORS (if needed)
 app.use(cors());
 
-// Define the endpoint to log IP addresses
-app.get("/log-ip", (req, res) => {
-  // Get the real client IP address, even behind proxies
+// Connect to MongoDB
+mongoose
+  .connect("mongodb+srv://ascripter70:hadi112233@cluster0.j4vwb4o.mongodb.net/", {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => console.log(err));
+
+// Middleware to log IP addresses
+app.use(async (req, res, next) => {
   const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress || req.socket.remoteAddress || null;
 
-  // Convert "::1" to "127.0.0.1" for better readability (optional)
-  const formattedIp = ip === "::1" ? "127.0.0.1" : ip;
+  try {
+    // Create and save the log entry
+    const log = new IpLog({ ip });
+    await log.save();
+    console.log(`IP Logged: ${ip}`);
+  } catch (error) {
+    console.error("Error logging IP:", error);
+  }
 
-  // Define the path for the log file
-  const logFilePath = path.join(__dirname, "ip-logs.txt");
+  next(); // Pass control to the next middleware or route handler
+});
 
-  // Prepare the log message
-  const logMessage = `IP: ${formattedIp} accessed at ${new Date().toISOString()}\n`;
-
-  // Append the log message to the file
-  fs.appendFile(logFilePath, logMessage, (err) => {
-    if (err) {
-      console.error("Error writing IP address to file:", err);
-      return res.status(500).send("Error logging IP address.");
-    }
-    res.status(200).send("IP logged successfully.");
-  });
+// Example route
+app.get("/", (req, res) => {
+  res.send("");
 });
 
 // Start the server
